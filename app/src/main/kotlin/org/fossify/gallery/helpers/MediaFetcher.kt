@@ -100,7 +100,9 @@ class MediaFetcher(val context: Context) {
             val selectionArgs = getSelectionArgsQuery(filterMedia)
             // MediaStore marks files in .nomedia and dot folders as MEDIA_TYPE_NONE, and so do some RAW and SVG files
             if (isRPlus() && !context.config.shouldShowHidden) {
-                val typeless = filterMedia and (TYPE_RAWS or TYPE_SVGS)
+                // matching untyped files needs a full table scan, so it runs only as often as the internal storage scan
+                val runCount = context.config.appRunCount
+                val typeless = if (runCount == 1 || runCount % 30 == 0) filterMedia and (TYPE_RAWS or TYPE_SVGS) else 0
                 val typelessQuery = if (typeless != 0) " OR ${getSelectionQuery(typeless)}" else ""
                 selection = "($selection) AND ($imageOrVideoSelection$typelessQuery)"
                 selectionArgs.addAll(getSelectionArgsQuery(typeless))
