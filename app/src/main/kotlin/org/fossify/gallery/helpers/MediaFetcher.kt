@@ -21,13 +21,24 @@ import org.fossify.gallery.models.ThumbnailSection
 import java.io.File
 import java.util.Calendar
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 class MediaFetcher(val context: Context) {
     var shouldStop = false
+    private val folderListings = ConcurrentHashMap<String, Future<Array<File>?>>()
     private val imageOrVideoSelection =
         "${Files.FileColumns.MEDIA_TYPE} IN (${Files.FileColumns.MEDIA_TYPE_IMAGE}, ${Files.FileColumns.MEDIA_TYPE_VIDEO})"
 
     // on Android 11 we fetch all files at once from MediaStore and have it split by folder, use it if available
+    // listing a folder through the storage FUSE layer is slow, so many folders are listed in parallel
+    fun prefetchFolderListings(folders: List<String>) {
+        val pool = Executors.newFixedThreadPool(8)
+        folders.forEach { folderListings[it] = pool.submit<Array<File>?> { File(it).listFiles() } }
+        pool.shutdown()
+    }
+
     fun getFilesFrom(
         curPath: String, isPickImage: Boolean, isPickVideo: Boolean, getProperDateTaken: Boolean, getProperLastModified: Boolean,
         getProperFileSize: Boolean, favoritePaths: ArrayList<String>, getVideoDurations: Boolean,
@@ -324,7 +335,7 @@ class MediaFetcher(val context: Context) {
         val files = when (folder) {
             FAVORITES -> favoritePaths.filter { showHidden || !it.contains("/.") }.map { File(it) }.toMutableList() as ArrayList<File>
             RECYCLE_BIN -> deletedMedia.map { File(it.path) }.toMutableList() as ArrayList<File>
-            else -> File(folder).listFiles()?.toMutableList() ?: return media
+            else -> (folderListings.remove(folder)?.get() ?: File(folder).listFiles())?.toMutableList() ?: return media
         }
 
         for (curFile in files) {

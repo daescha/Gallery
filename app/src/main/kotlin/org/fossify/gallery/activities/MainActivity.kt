@@ -1178,6 +1178,7 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
             getProperDateTaken = true,
             dateTakens = dateTakens
         )
+        mLastMediaFetcher!!.prefetchFolderListings(dirs.map { it.path }.filter { it != FAVORITES && it != RECYCLE_BIN })
         try {
             for (directory in dirs) {
                 if (mShouldStopFetching || isDestroyed || isFinishing) {
