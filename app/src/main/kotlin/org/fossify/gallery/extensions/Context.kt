@@ -571,16 +571,12 @@ fun Context.checkAppendingHidden(
     path: String,
     hidden: String,
     includedFolders: MutableSet<String>,
-    noMediaFolders: ArrayList<String>
+    folderNoMediaStatuses: HashMap<String, Boolean>
 ): String {
     val dirName = getFolderNameFromPath(path)
-    val folderNoMediaStatuses = HashMap<String, Boolean>()
-    noMediaFolders.forEach { folder ->
-        folderNoMediaStatuses["$folder/$NOMEDIA"] = true
-    }
 
     return if (
-        path.doesThisOrParentHaveNoMedia(folderNoMediaStatuses, null)
+        path.doesThisOrParentHaveNoMedia(folderNoMediaStatuses) { folder, hasNoMedia -> folderNoMediaStatuses["$folder/$NOMEDIA"] = hasNoMedia }
         && !path.isThisOrParentIncluded(includedFolders)
     ) {
         "$dirName $hidden"
@@ -1238,7 +1234,7 @@ fun Context.createDirectoryFromMedia(
     hiddenString: String,
     includedFolders: MutableSet<String>,
     getProperFileSize: Boolean,
-    noMediaFolders: ArrayList<String>,
+    folderNoMediaStatuses: HashMap<String, Boolean>,
 ): Directory {
     val OTGPath = config.OTGPath
     val grouped = MediaFetcher(this).groupMedia(curMedia, path)
@@ -1263,7 +1259,7 @@ fun Context.createDirectoryFromMedia(
     val defaultMedium = Medium(0, "", "", "", 0L, 0L, 0L, 0, 0, false, 0L, 0L)
     val firstItem = curMedia.firstOrNull() ?: defaultMedium
     val lastItem = curMedia.lastOrNull() ?: defaultMedium
-    val dirName = checkAppendingHidden(path, hiddenString, includedFolders, noMediaFolders)
+    val dirName = checkAppendingHidden(path, hiddenString, includedFolders, folderNoMediaStatuses)
     val lastModified = if (isSortingAscending) {
         min(firstItem.modified, lastItem.modified)
     } else {
@@ -1335,7 +1331,7 @@ fun Context.updateDirectoryPath(path: String) {
     val hiddenString = getString(R.string.hidden)
     val albumCovers = config.parseAlbumCovers()
     val includedFolders = config.includedFolders
-    val noMediaFolders = getNoMediaFoldersSync()
+    val folderNoMediaStatuses = getNoMediaFoldersSync().associateTo(HashMap()) { "$it/$NOMEDIA" to true }
 
     val sorting = config.getFolderSorting(path)
     val grouping = config.getFolderGrouping(path)
@@ -1379,7 +1375,7 @@ fun Context.updateDirectoryPath(path: String) {
         hiddenString = hiddenString,
         includedFolders = includedFolders,
         getProperFileSize = getProperFileSize,
-        noMediaFolders = noMediaFolders
+        folderNoMediaStatuses = folderNoMediaStatuses
     )
     updateDBDirectory(directory)
 }

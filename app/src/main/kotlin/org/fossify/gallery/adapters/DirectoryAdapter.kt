@@ -439,7 +439,7 @@ class DirectoryAdapter(
         val includedFolders = config.includedFolders
         val hidden = activity.getString(R.string.hidden)
         dirs.forEach {
-            it.name = activity.checkAppendingHidden(it.path, hidden, includedFolders, ArrayList())
+            it.name = activity.checkAppendingHidden(it.path, hidden, includedFolders, HashMap())
         }
         listener?.updateDirectories(dirs.toMutableList() as ArrayList)
         activity.runOnUiThread {

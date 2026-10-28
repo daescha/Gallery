@@ -28,12 +28,14 @@ import java.util.concurrent.Future
 class MediaFetcher(val context: Context) {
     var shouldStop = false
     private val folderListings = ConcurrentHashMap<String, Future<Array<File>?>>()
+    private var folderNoMediaStatuses: HashMap<String, Boolean>? = null
     private val imageOrVideoSelection =
         "${Files.FileColumns.MEDIA_TYPE} IN (${Files.FileColumns.MEDIA_TYPE_IMAGE}, ${Files.FileColumns.MEDIA_TYPE_VIDEO})"
 
     // on Android 11 we fetch all files at once from MediaStore and have it split by folder, use it if available
     // listing a folder through the storage FUSE layer is slow, so many folders are listed in parallel
-    fun prefetchFolderListings(folders: List<String>) {
+    fun prefetchFolderListings(folders: List<String>, noMediaStatuses: HashMap<String, Boolean>) {
+        folderNoMediaStatuses = noMediaStatuses
         val pool = Executors.newFixedThreadPool(8)
         folders.forEach { folderListings[it] = pool.submit<Array<File>?> { File(it).listFiles() } }
         pool.shutdown()
@@ -346,6 +348,10 @@ class MediaFetcher(val context: Context) {
             FAVORITES -> favoritePaths.filter { showHidden || !it.contains("/.") }.map { File(it) }.toMutableList() as ArrayList<File>
             RECYCLE_BIN -> deletedMedia.map { File(it.path) }.toMutableList() as ArrayList<File>
             else -> (folderListings.remove(folder)?.get() ?: File(folder).listFiles())?.toMutableList() ?: return media
+        }
+
+        if (folder != FAVORITES && folder != RECYCLE_BIN) {
+            folderNoMediaStatuses?.set("$folder/$NOMEDIA", files.any { it.name == NOMEDIA })
         }
 
         for (curFile in files) {

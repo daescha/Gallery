@@ -62,6 +62,7 @@ import org.fossify.commons.extensions.underlineText
 import org.fossify.commons.extensions.viewBinding
 import org.fossify.commons.helpers.DAY_SECONDS
 import org.fossify.commons.helpers.FAVORITES
+import org.fossify.commons.helpers.NOMEDIA
 import org.fossify.commons.helpers.PERMISSION_READ_STORAGE
 import org.fossify.commons.helpers.SORT_BY_DATE_MODIFIED
 import org.fossify.commons.helpers.SORT_BY_DATE_TAKEN
@@ -1131,7 +1132,7 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
         val hiddenString = getString(R.string.hidden)
         val albumCovers = config.parseAlbumCovers()
         val includedFolders = config.includedFolders
-        val noMediaFolders = getNoMediaFoldersSync()
+        val folderNoMediaStatuses = getNoMediaFoldersSync().associateTo(HashMap()) { "$it/$NOMEDIA" to true }
         val tempFolderPath = config.tempFolderPath
         val getProperFileSize = config.directorySorting and SORT_BY_SIZE != 0
         val dirPathsToRemove = ArrayList<String>()
@@ -1178,7 +1179,7 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
             getProperDateTaken = true,
             dateTakens = dateTakens
         )
-        mLastMediaFetcher!!.prefetchFolderListings(dirs.map { it.path }.filter { it != FAVORITES && it != RECYCLE_BIN })
+        mLastMediaFetcher!!.prefetchFolderListings(dirs.map { it.path }.filter { it != FAVORITES && it != RECYCLE_BIN }, folderNoMediaStatuses)
         try {
             for (directory in dirs) {
                 if (mShouldStopFetching || isDestroyed || isFinishing) {
@@ -1225,7 +1226,7 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
                         hiddenString = hiddenString,
                         includedFolders = includedFolders,
                         getProperFileSize = getProperFileSize,
-                        noMediaFolders = noMediaFolders
+                        folderNoMediaStatuses = folderNoMediaStatuses
                     )
                 }
 
@@ -1356,7 +1357,7 @@ class MainActivity : SimpleActivity(), DirectoryOperationsListener {
                 hiddenString = hiddenString,
                 includedFolders = includedFolders,
                 getProperFileSize = getProperFileSize,
-                noMediaFolders = noMediaFolders
+                folderNoMediaStatuses = folderNoMediaStatuses
             )
             dirs.add(newDir)
             setupAdapter(dirs)
