@@ -20,7 +20,9 @@ import org.fossify.commons.helpers.SORT_USE_NUMERIC_VALUE
 import org.fossify.gallery.R
 import org.fossify.gallery.databinding.DialogChangeSortingBinding
 import org.fossify.gallery.extensions.config
+import org.fossify.gallery.helpers.RECYCLE_BIN
 import org.fossify.gallery.helpers.SHOW_ALL
+import org.fossify.gallery.helpers.SORT_BY_DATE_DELETED
 
 class ChangeSortingDialog(
     val activity: BaseSimpleActivity,
@@ -60,6 +62,7 @@ class ChangeSortingDialog(
             sortingDialogUseForThisFolder.isChecked = config.hasCustomSorting(pathToUse)
             sortingDialogBottomNote.beVisibleIf(!isDirectorySorting)
             sortingDialogRadioCustom.beVisibleIf(isDirectorySorting)
+            sortingDialogRadioDateDeleted.beVisibleIf(pathToUse == RECYCLE_BIN)
         }
 
         activity.getAlertDialogBuilder()
@@ -100,6 +103,7 @@ class ChangeSortingDialog(
             currSorting and SORT_BY_COUNT != 0 -> binding.sortingDialogRadioNumberOfItems
             currSorting and SORT_BY_DATE_MODIFIED != 0 -> binding.sortingDialogRadioLastModified
             currSorting and SORT_BY_DATE_TAKEN != 0 -> binding.sortingDialogRadioDateTaken
+            currSorting and SORT_BY_DATE_DELETED != 0 -> binding.sortingDialogRadioDateDeleted
             currSorting and SORT_BY_RANDOM != 0 -> binding.sortingDialogRadioRandom
             currSorting and SORT_BY_CUSTOM != 0 -> binding.sortingDialogRadioCustom
             else -> binding.sortingDialogRadioName
@@ -124,6 +128,7 @@ class ChangeSortingDialog(
             R.id.sorting_dialog_radio_size -> SORT_BY_SIZE
             R.id.sorting_dialog_radio_number_of_items -> SORT_BY_COUNT
             R.id.sorting_dialog_radio_last_modified -> SORT_BY_DATE_MODIFIED
+            R.id.sorting_dialog_radio_date_deleted -> SORT_BY_DATE_DELETED
             R.id.sorting_dialog_radio_random -> SORT_BY_RANDOM
             R.id.sorting_dialog_radio_custom -> SORT_BY_CUSTOM
             else -> SORT_BY_DATE_TAKEN

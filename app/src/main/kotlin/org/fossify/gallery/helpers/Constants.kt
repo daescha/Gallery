@@ -40,6 +40,8 @@ const val MEDIA_COLUMN_CNT = "media_column_cnt"
 const val MEDIA_LANDSCAPE_COLUMN_CNT = "media_landscape_column_cnt"
 const val MEDIA_HORIZONTAL_COLUMN_CNT = "media_horizontal_column_cnt"
 const val MEDIA_LANDSCAPE_HORIZONTAL_COLUMN_CNT = "media_landscape_horizontal_column_cnt"
+// above the sort bits defined by Fossify Commons
+const val SORT_BY_DATE_DELETED = 1 shl 20
 const val SHOW_ALL = "show_all"                           // display images and videos from all folders together
 const val HIDE_FOLDER_TOOLTIP_SHOWN = "hide_folder_tooltip_shown"
 const val EXCLUDED_FOLDERS = "excluded_folders"
