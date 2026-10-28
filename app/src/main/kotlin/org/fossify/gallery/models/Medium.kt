@@ -12,12 +12,12 @@ import java.io.Serializable
 import java.util.Calendar
 import java.util.Locale
 
-@Entity(tableName = "media", indices = [(Index(value = ["full_path"], unique = true))])
+@Entity(tableName = "media", indices = [Index(value = ["full_path"], unique = true), Index(value = ["parent_path"])])
 data class Medium(
     @PrimaryKey(autoGenerate = true) var id: Long?,
     @ColumnInfo(name = "filename") var name: String,
-    @ColumnInfo(name = "full_path") var path: String,
-    @ColumnInfo(name = "parent_path") var parentPath: String,
+    @ColumnInfo(name = "full_path", collate = ColumnInfo.NOCASE) var path: String,
+    @ColumnInfo(name = "parent_path", collate = ColumnInfo.NOCASE) var parentPath: String,
     @ColumnInfo(name = "last_modified") var modified: Long,
     @ColumnInfo(name = "date_taken") var taken: Long,
     @ColumnInfo(name = "size") var size: Long,
