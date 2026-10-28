@@ -36,7 +36,7 @@ class MediaFetcher(val context: Context) {
     // listing a folder through the storage FUSE layer is slow, so many folders are listed in parallel
     fun prefetchFolderListings(folders: List<String>, noMediaStatuses: HashMap<String, Boolean>) {
         folderNoMediaStatuses = noMediaStatuses
-        val pool = Executors.newFixedThreadPool(8)
+        val pool = Executors.newFixedThreadPool(3)
         folders.forEach { folderListings[it] = pool.submit<Array<File>?> { File(it).listFiles() } }
         pool.shutdown()
     }
