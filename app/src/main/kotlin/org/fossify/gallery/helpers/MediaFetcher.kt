@@ -135,11 +135,17 @@ class MediaFetcher(val context: Context) {
                 folderNoMediaStatuses["$folder/$NOMEDIA"] = true
             }
 
-            distinctPaths.filter {
+            val (visiblePaths, invisiblePaths) = distinctPaths.partition {
                 it.shouldFolderBeVisible(excludedPaths, includedPaths, shouldShowHidden, folderNoMediaStatuses) { path, hasNoMedia ->
                     folderNoMediaStatuses[path] = hasNoMedia
                 }
-            }.toMutableList() as ArrayList<String>
+            }
+
+            val everShownFolders = config.everShownFolders
+            if (invisiblePaths.any { it in everShownFolders }) {
+                config.everShownFolders = everShownFolders - invisiblePaths.toSet()
+            }
+            ArrayList(visiblePaths)
         } catch (e: Exception) {
             ArrayList()
         }
