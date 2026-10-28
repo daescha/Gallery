@@ -118,7 +118,17 @@ class MediaFetcher(val context: Context) {
                 selection = "($selection) AND ($imageOrVideoSelection$typelessQuery)"
                 selectionArgs.addAll(getSelectionArgsQuery(typeless))
             }
-            val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs.toTypedArray(), null)
+            val cursor = if (isRPlus()) {
+                // one row per folder keeps the cursor small when folders hold many files
+                val queryArgs = Bundle().apply {
+                    putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+                    putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs.toTypedArray())
+                    putString(ContentResolver.QUERY_ARG_SQL_GROUP_BY, Images.Media.BUCKET_ID)
+                }
+                context.contentResolver.query(uri, projection, queryArgs, null)
+            } else {
+                context.contentResolver.query(uri, projection, selection, selectionArgs.toTypedArray(), null)
+            }
             folders.addAll(parseCursor(cursor!!))
 
             val config = context.config
