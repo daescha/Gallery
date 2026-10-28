@@ -1,5 +1,6 @@
 package org.fossify.gallery.activities
 
+import androidx.lifecycle.Lifecycle
 import android.app.WallpaperManager
 import android.content.Intent
 import android.graphics.Bitmap
@@ -549,6 +550,8 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
 
         mLastMediaHandler.removeCallbacksAndMessages(null)
         mLastMediaHandler.postDelayed({
+            // a check already running when the activity pauses posts the next one, which must not poll in the background
+            if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@postDelayed
             ensureBackgroundThread {
                 val mediaId = getLatestMediaId()
                 val mediaDateId = getLatestMediaByDateId()
