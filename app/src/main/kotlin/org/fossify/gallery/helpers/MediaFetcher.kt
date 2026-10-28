@@ -94,9 +94,17 @@ class MediaFetcher(val context: Context) {
             val filterMedia = context.config.filterMedia
             val uri = Files.getContentUri("external")
             val projection = arrayOf(Images.Media.DATA)
-            val selection = getSelectionQuery(filterMedia)
-            val selectionArgs = getSelectionArgsQuery(filterMedia).toTypedArray()
-            val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs, null)
+            var selection = getSelectionQuery(filterMedia)
+            val selectionArgs = getSelectionArgsQuery(filterMedia)
+            // MediaStore marks files in .nomedia and dot folders as MEDIA_TYPE_NONE, and so do some RAW and SVG files
+            if (isRPlus() && !context.config.shouldShowHidden) {
+                val typeless = filterMedia and (TYPE_RAWS or TYPE_SVGS)
+                val typelessQuery = if (typeless != 0) " OR ${getSelectionQuery(typeless)}" else ""
+                selection = "($selection) AND (${Files.FileColumns.MEDIA_TYPE} IN " +
+                    "(${Files.FileColumns.MEDIA_TYPE_IMAGE}, ${Files.FileColumns.MEDIA_TYPE_VIDEO})$typelessQuery)"
+                selectionArgs.addAll(getSelectionArgsQuery(typeless))
+            }
+            val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs.toTypedArray(), null)
             folders.addAll(parseCursor(cursor!!))
 
             val config = context.config
