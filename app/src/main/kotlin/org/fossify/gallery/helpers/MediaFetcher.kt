@@ -24,6 +24,8 @@ import java.util.Locale
 
 class MediaFetcher(val context: Context) {
     var shouldStop = false
+    private val imageOrVideoSelection =
+        "${Files.FileColumns.MEDIA_TYPE} IN (${Files.FileColumns.MEDIA_TYPE_IMAGE}, ${Files.FileColumns.MEDIA_TYPE_VIDEO})"
 
     // on Android 11 we fetch all files at once from MediaStore and have it split by folder, use it if available
     fun getFilesFrom(
@@ -100,8 +102,7 @@ class MediaFetcher(val context: Context) {
             if (isRPlus() && !context.config.shouldShowHidden) {
                 val typeless = filterMedia and (TYPE_RAWS or TYPE_SVGS)
                 val typelessQuery = if (typeless != 0) " OR ${getSelectionQuery(typeless)}" else ""
-                selection = "($selection) AND (${Files.FileColumns.MEDIA_TYPE} IN " +
-                    "(${Files.FileColumns.MEDIA_TYPE_IMAGE}, ${Files.FileColumns.MEDIA_TYPE_VIDEO})$typelessQuery)"
+                selection = "($selection) AND ($imageOrVideoSelection$typelessQuery)"
                 selectionArgs.addAll(getSelectionArgsQuery(typeless))
             }
             val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs.toTypedArray(), null)
@@ -673,7 +674,7 @@ class MediaFetcher(val context: Context) {
         val uri = Files.getContentUri("external")
 
         try {
-            context.queryCursor(uri, projection) { cursor ->
+            context.queryCursor(uri, projection, imageOrVideoSelection) { cursor ->
                 try {
                     val dateTaken = cursor.getLongValue(Images.Media.DATE_TAKEN)
                     if (dateTaken != 0L) {
@@ -732,7 +733,7 @@ class MediaFetcher(val context: Context) {
         val uri = Files.getContentUri("external")
 
         try {
-            context.queryCursor(uri, projection) { cursor ->
+            context.queryCursor(uri, projection, imageOrVideoSelection) { cursor ->
                 try {
                     val lastModified = cursor.getLongValue(Images.Media.DATE_MODIFIED) * 1000
                     if (lastModified != 0L) {
