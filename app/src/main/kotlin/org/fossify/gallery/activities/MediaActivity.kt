@@ -4,12 +4,21 @@ import androidx.lifecycle.Lifecycle
 import android.app.WallpaperManager
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Matrix
+import android.graphics.Rect
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
+import android.view.TextureView
+import android.view.View
 import android.view.ViewGroup
 import android.widget.RelativeLayout
 import androidx.core.net.toUri
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
@@ -100,6 +109,7 @@ import org.fossify.gallery.helpers.PICKED_PATHS
 import org.fossify.gallery.helpers.RECYCLE_BIN
 import org.fossify.gallery.helpers.SET_WALLPAPER_INTENT
 import org.fossify.gallery.helpers.SHOW_ALL
+import org.fossify.gallery.helpers.THUMBNAIL_FADE_DURATION_MS
 import org.fossify.gallery.helpers.SHOW_FAVORITES
 import org.fossify.gallery.helpers.SHOW_RECYCLE_BIN
 import org.fossify.gallery.helpers.SHOW_TEMP_HIDDEN_DURATION
@@ -148,6 +158,9 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
     private var mStoredThumbnailSpacing = 0
 
     private val binding by viewBinding(ActivityMediaBinding::inflate)
+
+    private var mPreviewPlayer: ExoPlayer? = null
+    private var mPreviewView: TextureView? = null
 
     companion object {
         var mMedia = ArrayList<ThumbnailItem>()
@@ -273,6 +286,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
         binding.mediaRefreshLayout.isRefreshing = false
         storeStateVariables()
         mLastMediaHandler.removeCallbacksAndMessages(null)
+        stopVideoPreview()
 
         if (!mMedia.isEmpty()) {
             mCurrAsyncTask?.stopFetching()
@@ -520,6 +534,12 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
                 binding.mediaGrid.adapter = this
             }
 
+            binding.mediaGrid.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                    if (newState == RecyclerView.SCROLL_STATE_IDLE) startVideoPreview() else stopVideoPreview()
+                }
+            })
+
             val viewType = config.getFolderViewType(if (mShowAll) SHOW_ALL else mPath)
             if (viewType == VIEW_TYPE_LIST && areSystemAnimationsEnabled) {
                 binding.mediaGrid.scheduleLayoutAnimation()
@@ -533,6 +553,7 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
         } else {
             searchQueryChanged(mLastSearchedText)
         }
+        binding.mediaGrid.post { startVideoPreview() }
 
         setupScrollDirection()
     }
@@ -780,6 +801,57 @@ class MediaActivity : SimpleActivity(), MediaOperationsListener {
         config.temporarilyShowHidden = show
         getMedia()
         refreshMenuItems()
+    }
+
+    // plays the most visible video muted in a single column grid, using one player for the whole grid
+    private fun startVideoPreview() {
+        stopVideoPreview()
+        val viewType = config.getFolderViewType(if (mShowAll) SHOW_ALL else mPath)
+        if (!config.animateGifs || config.mediaColumnCnt != 1 || viewType != VIEW_TYPE_GRID || isFinishing) {
+            return
+        }
+
+        val grid = binding.mediaGrid
+        val media = getMediaAdapter()?.media ?: return
+        val visibleRect = Rect()
+        val holder = (0 until grid.childCount).map { grid.getChildAt(it) }
+            .filter { (media.getOrNull(grid.getChildAdapterPosition(it)) as? Medium)?.isVideo() == true }
+            .maxByOrNull { if (it.getLocalVisibleRect(visibleRect)) visibleRect.height() else 0 } as? ViewGroup ?: return
+        val medium = media[grid.getChildAdapterPosition(holder)] as Medium
+        val thumbnail = holder.findViewById<View>(R.id.medium_thumbnail)
+        val textureView = TextureView(this).apply { alpha = 0f }
+        holder.addView(textureView, holder.indexOfChild(thumbnail) + 1, RelativeLayout.LayoutParams(thumbnail.width, thumbnail.height))
+        mPreviewView = textureView
+        mPreviewPlayer = ExoPlayer.Builder(this).build().apply {
+            volume = 0f
+            repeatMode = Player.REPEAT_MODE_ONE
+            setVideoTextureView(textureView)
+            addListener(object : Player.Listener {
+                override fun onVideoSizeChanged(videoSize: VideoSize) {
+                    val width = textureView.width.toFloat()
+                    val height = textureView.height.toFloat()
+                    if (videoSize.height == 0 || width == 0f || height == 0f) return
+                    val ratio = (videoSize.width * videoSize.pixelWidthHeightRatio / videoSize.height) / (width / height)
+                    textureView.setTransform(Matrix().apply {
+                        setScale(maxOf(ratio, 1f), maxOf(1f / ratio, 1f), width / 2, height / 2)
+                    })
+                }
+
+                override fun onRenderedFirstFrame() {
+                    textureView.animate().alpha(1f).duration = THUMBNAIL_FADE_DURATION_MS.toLong()
+                }
+            })
+            setMediaItem(MediaItem.fromUri(Uri.fromFile(File(medium.path))))
+            prepare()
+            play()
+        }
+    }
+
+    private fun stopVideoPreview() {
+        mPreviewPlayer?.release()
+        mPreviewPlayer = null
+        mPreviewView?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        mPreviewView = null
     }
 
     private fun setupLayoutManager() {
