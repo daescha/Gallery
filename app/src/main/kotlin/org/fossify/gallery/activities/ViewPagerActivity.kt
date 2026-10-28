@@ -193,6 +193,7 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
     private var mPath = ""
     private var mDirectory = ""
     private var mIsFullScreen = false
+    private var mRotateShownAlways: Boolean? = null
     private var mPos = -1
     private var mShowAll = false
     private var mIsSlideshowActive = false
@@ -318,13 +319,17 @@ class ViewPagerActivity : BaseViewerActivity(), ViewPager.OnPageChangeListener, 
                 findItem(R.id.menu_restore_file).isVisible = currentMedium.path.startsWith(recycleBinPath)
                 findItem(R.id.menu_create_shortcut).isVisible = true
                 findItem(R.id.menu_change_orientation).isVisible = rotationDegrees == 0 && visibleBottomActions and BOTTOM_ACTION_CHANGE_ORIENTATION == 0
-                findItem(R.id.menu_rotate).setShowAsAction(
-                    if (rotationDegrees != 0) {
-                        MenuItem.SHOW_AS_ACTION_ALWAYS
-                    } else {
-                        MenuItem.SHOW_AS_ACTION_IF_ROOM
-                    }
-                )
+                // setShowAsAction relayouts the toolbar even when the value is unchanged
+                if (mRotateShownAlways != (rotationDegrees != 0)) {
+                    mRotateShownAlways = rotationDegrees != 0
+                    findItem(R.id.menu_rotate).setShowAsAction(
+                        if (rotationDegrees != 0) {
+                            MenuItem.SHOW_AS_ACTION_ALWAYS
+                        } else {
+                            MenuItem.SHOW_AS_ACTION_IF_ROOM
+                        }
+                    )
+                }
             }
 
             if (visibleBottomActions != 0) {
